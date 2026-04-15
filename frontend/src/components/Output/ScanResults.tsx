@@ -13,6 +13,9 @@ interface Props {
   displayUnit: DisplayUnit
   isLoading: boolean
   error: string | null
+  focusMode: boolean
+  hoveredPass: number | null
+  onPassHover: (pass: number | null) => void
 }
 
 const PASS_COLORS = ['#4a9eff', '#f97316', '#22c55e', '#a855f7', '#ef4444', '#06b6d4']
@@ -50,7 +53,7 @@ function buildCopyText(result: ScanResult, displayUnit: DisplayUnit): string {
   return lines.join('\n')
 }
 
-export default function ScanResults({ result, displayUnit, isLoading, error }: Props) {
+export default function ScanResults({ result, displayUnit, isLoading, error, focusMode, hoveredPass, onPassHover }: Props) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -120,11 +123,18 @@ export default function ScanResults({ result, displayUnit, isLoading, error }: P
         const color = PASS_COLORS[idx % PASS_COLORS.length]
         const d = DISPLAY_UNIT_OPTIONS.find((o) => o.value === displayUnit)!.decimals
         const fmt = (um: number) => fmtDisplay(um, displayUnit, d)
+        const isHovered = focusMode && hoveredPass === pass.pass_number
+        const isDimmed = focusMode && hoveredPass !== null && hoveredPass !== pass.pass_number
         return (
           <div
             key={pass.pass_number}
-            className="rounded border overflow-hidden"
-            style={{ borderColor: color + '44' }}
+            className="rounded border overflow-hidden transition-opacity"
+            style={{
+              borderColor: color + (isHovered ? 'aa' : '44'),
+              opacity: isDimmed ? 0.4 : 1,
+            }}
+            onMouseEnter={() => focusMode && onPassHover(pass.pass_number)}
+            onMouseLeave={() => focusMode && onPassHover(null)}
           >
             <div
               className="px-3 py-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide"

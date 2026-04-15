@@ -83,6 +83,10 @@ export default function App() {
   // Right panel is shown once the user has clicked Generate (even if loading/error)
   const [hasGenerated, setHasGenerated] = useState(false)
 
+  // Focus/highlight mode — hover pass highlights it on canvas and sidebar
+  const [focusMode, setFocusMode] = useState(true)
+  const [hoveredPass, setHoveredPass] = useState<number | null>(null)
+
   // Dark / light mode — initial value comes from <html class="dark"> set by the inline head script
   const [darkMode, setDarkMode] = useState<boolean>(
     () => document.documentElement.classList.contains('dark')
@@ -193,8 +197,8 @@ export default function App() {
             </button>
 
             {settingsOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-44 rounded border shadow-lg z-50 bg-white dark:bg-[#252525] border-gray-200 dark:border-[#3a3a3a]">
-                <div className="p-2.5">
+              <div className="absolute right-0 top-full mt-1.5 w-52 rounded border shadow-lg z-50 bg-white dark:bg-[#252525] border-gray-200 dark:border-[#3a3a3a]">
+                <div className="p-2.5 space-y-1">
                   <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-400 dark:text-[#666] mb-2">Theme</p>
                   <button
                     onClick={() => setDarkMode((v) => !v)}
@@ -216,6 +220,18 @@ export default function App() {
                       </>
                     )}
                   </button>
+                  <div className="border-t border-gray-100 dark:border-[#333] pt-1.5 mt-1">
+                    <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-400 dark:text-[#666] mb-1.5">Canvas</p>
+                    <button
+                      onClick={() => setFocusMode((v) => !v)}
+                      className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded text-xs transition-colors text-gray-700 dark:text-[#d4d4d4] hover:bg-gray-100 dark:hover:bg-[#333]"
+                    >
+                      <span>Focus on hover</span>
+                      <span className={`w-7 h-4 rounded-full transition-colors flex items-center px-0.5 shrink-0 ${focusMode ? 'bg-blue-500' : 'bg-gray-300 dark:bg-[#444]'}`}>
+                        <span className={`w-3 h-3 rounded-full bg-white shadow transition-transform ${focusMode ? 'translate-x-3' : 'translate-x-0'}`} />
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -295,6 +311,9 @@ export default function App() {
             drawMode={drawMode}
             darkMode={darkMode}
             displayUnit={displayUnit}
+            focusMode={focusMode}
+            hoveredPass={hoveredPass}
+            onPassHover={setHoveredPass}
             onShapeChange={handleShapeChange}
           />
 
@@ -317,6 +336,9 @@ export default function App() {
               displayUnit={displayUnit}
               isLoading={isLoading}
               error={error}
+              focusMode={focusMode}
+              hoveredPass={hoveredPass}
+              onPassHover={setHoveredPass}
             />
           </aside>
         )}

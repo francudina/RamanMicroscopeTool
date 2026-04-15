@@ -34,6 +34,9 @@ interface Props {
   drawMode: DrawMode
   darkMode: boolean
   displayUnit: DisplayUnit
+  focusMode: boolean
+  hoveredPass: number | null
+  onPassHover: (pass: number | null) => void
   onShapeChange: (shape: SampleShape) => void
 }
 
@@ -210,9 +213,15 @@ function ShapeRenderer({
 function ScanGridRenderer({
   scanResult,
   vp,
+  focusMode,
+  hoveredPass,
+  onPassHover,
 }: {
   scanResult: ScanResult
   vp: Viewport
+  focusMode: boolean
+  hoveredPass: number | null
+  onPassHover: (pass: number | null) => void
 }) {
   const toX = (um: number) => umToPixel(um, vp.left, vp.scale)
   const toY = (um: number) => umToPixel(um, vp.top, vp.scale)
@@ -221,6 +230,24 @@ function ScanGridRenderer({
 
   scanResult.passes.forEach((pass, passIdx) => {
     const color = PASS_COLORS[passIdx % PASS_COLORS.length]
+    const isHovered = focusMode && hoveredPass === pass.pass_number
+    const isDimmed = focusMode && hoveredPass !== null && hoveredPass !== pass.pass_number
+    const opacity = isDimmed ? 0.15 : isHovered ? 1 : 0.85
+    const strokeWidth = isHovered ? 2.5 : 1.5
+
+    // Invisible hit rect for hover detection
+    elements.push(
+      <Rect
+        key={`hit-${passIdx}`}
+        x={toX(pass.region.x_min)}
+        y={toY(pass.region.y_min)}
+        width={(pass.region.x_max - pass.region.x_min) * vp.scale}
+        height={(pass.region.y_max - pass.region.y_min) * vp.scale}
+        fill="transparent"
+        onMouseEnter={() => focusMode && onPassHover(pass.pass_number)}
+        onMouseLeave={() => focusMode && onPassHover(null)}
+      />,
+    )
 
     // Pass region outline
     elements.push(
@@ -231,9 +258,10 @@ function ScanGridRenderer({
         width={(pass.region.x_max - pass.region.x_min) * vp.scale}
         height={(pass.region.y_max - pass.region.y_min) * vp.scale}
         stroke={color}
-        strokeWidth={1.5}
+        strokeWidth={strokeWidth}
         dash={[8, 4]}
-        fill="transparent"
+        fill={isHovered ? color + '15' : 'transparent'}
+        opacity={opacity}
         listening={false}
       />,
     )
@@ -245,15 +273,15 @@ function ScanGridRenderer({
         x={toX(pass.region.x_min) + 4}
         y={toY(pass.region.y_min) + 4}
         text={`Pass ${pass.pass_number}`}
-        fontSize={11}
+        fontSize={isHovered ? 13 : 11}
         fill={color}
         fontStyle="bold"
+        opacity={opacity}
         listening={false}
       />,
     )
 
     if (pass.total_points <= 2000) {
-      // Render individual scan points
       pass.grid_points.forEach((pt, ptIdx) => {
         elements.push(
           <Circle
@@ -262,13 +290,12 @@ function ScanGridRenderer({
             y={toY(pt.y)}
             radius={Math.max(1.5, Math.min(3, vp.scale * 3))}
             fill={color}
-            opacity={0.8}
+            opacity={opacity * 0.8}
             listening={false}
           />,
         )
       })
     } else {
-      // Render grid lines for large point sets (performance)
       const r = pass.region
       const stepXpx = pass.delta_x * vp.scale
       const stepYpx = pass.delta_y * vp.scale
@@ -282,7 +309,7 @@ function ScanGridRenderer({
               points={[px, toY(r.y_min), px, toY(r.y_max)]}
               stroke={color}
               strokeWidth={0.5}
-              opacity={0.5}
+              opacity={opacity * 0.5}
               listening={false}
             />,
           )
@@ -297,13 +324,12 @@ function ScanGridRenderer({
               points={[toX(r.x_min), py, toX(r.x_max), py]}
               stroke={color}
               strokeWidth={0.5}
-              opacity={0.5}
+              opacity={opacity * 0.5}
               listening={false}
             />,
           )
         }
       }
-      // Corner dots to show actual scan boundaries
       const corners = [
         { x: r.x_min, y: r.y_min },
         { x: r.x_max, y: r.y_min },
@@ -318,6 +344,7 @@ function ScanGridRenderer({
             y={toY(c.y)}
             radius={4}
             fill={color}
+            opacity={opacity}
             listening={false}
           />,
         )
@@ -403,6 +430,9 @@ export default function SampleCanvas({
   drawMode,
   darkMode,
   displayUnit,
+  focusMode,
+  hoveredPass,
+  onPassHover,
   onShapeChange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -651,12 +681,20 @@ export default function SampleCanvas({
         </Layer>
 
         {/* Content layer — shapes, grid, drawing */}
-        <Layer listening={false}>
+        <Layer listening={focusMode}>
           {/* Sample shape */}
           {shape && <ShapeRenderer shape={shape} vp={vp} />}
 
           {/* Scan grid */}
-          {scanResult && <ScanGridRenderer scanResult={scanResult} vp={vp} />}
+          {scanResult && (
+            <ScanGridRenderer
+              scanResult={scanResult}
+              vp={vp}
+              focusMode={focusMode}
+              hoveredPass={hoveredPass}
+              onPassHover={onPassHover}
+            />
+          )}
 
           {/* Drawing previews */}
           {previewRect && (
