@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Props {
   text: string
@@ -6,42 +7,42 @@ interface Props {
   side?: 'top' | 'right'
 }
 
-/**
- * Lightweight CSS-only tooltip that appears on hover.
- * Wrap any element you want to give a hint to.
- *
- * Usage:
- *   <Tooltip text="Step size in X direction">
- *     <label>ΔX</label>
- *   </Tooltip>
- */
-export default function Tooltip({ text, children, side = 'top' }: Props) {
-  const positionClasses =
-    side === 'top'
-      ? 'bottom-full left-1/2 -translate-x-1/2 mb-2'
-      : 'left-full top-1/2 -translate-y-1/2 ml-2'
+const GAP = 8 // px between cursor and tooltip edge
 
-  const arrowClasses =
-    side === 'top'
-      ? 'top-full left-1/2 -translate-x-1/2 border-t-[#111827]'
-      : 'right-full top-1/2 -translate-y-1/2 border-r-[#111827]'
+export default function Tooltip({ text, children }: Props) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const anchorRef = useRef<HTMLSpanElement>(null)
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    setPos({ x: e.clientX, y: e.clientY })
+  }
+
+  const tooltipEl =
+    pos !== null
+      ? createPortal(
+          <span
+            className="pointer-events-none fixed z-[9999] px-2 py-1 rounded bg-[#111827] text-[#e5e7eb] text-[10px] leading-relaxed shadow-xl max-w-[160px] break-words text-left"
+            style={{
+              left: pos.x + GAP,
+              top: pos.y,
+              transform: 'translateY(-50%)',
+            }}
+          >
+            {text}
+          </span>,
+          document.body,
+        )
+      : null
 
   return (
-    <span className="relative group/tip inline-flex items-center">
+    <span
+      ref={anchorRef}
+      className="inline-flex items-center"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => setPos(null)}
+    >
       {children}
-      <span
-        className={`pointer-events-none absolute ${positionClasses}
-          px-2 py-1 rounded bg-[#111827] text-[#e5e7eb] text-[10px] leading-snug
-          whitespace-nowrap max-w-[200px] text-center
-          opacity-0 group-hover/tip:opacity-100
-          transition-opacity duration-150 z-[200] shadow-xl`}
-      >
-        {text}
-        <span
-          className={`absolute ${arrowClasses}
-            border-[4px] border-transparent`}
-        />
-      </span>
+      {tooltipEl}
     </span>
   )
 }

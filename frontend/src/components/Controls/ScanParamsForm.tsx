@@ -68,7 +68,6 @@ function StepField({
         />
         <span className="text-[10px] shrink-0 w-7 text-right text-gray-400 dark:text-[#555]">{displayUnit}</span>
       </div>
-      <span className="text-[10px] font-mono text-gray-400 dark:text-[#555]">{valueUm.toFixed(3)} µm</span>
     </div>
   )
 }
