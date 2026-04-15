@@ -1,41 +1,62 @@
-# Prerequisites
-*.d
+# ── AI ────────────────────────────────────────────────────────────────────────
+.claude
+.openai
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg-info/
+*.egg
+.eggs/
+backend/dist
+backend/build
+backend/venv
+backend/.venv
+backend/env
+backend/.env
+backend/.env.*
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
 
-# Precompiled Headers
-*.gch
-*.pch
+# ── Node / frontend ───────────────────────────────────────────────────────────
+frontend/node_modules
+frontend/dist/
+frontend/.vite
+frontend/.cache
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
 
-# Linker files
-*.ilk
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
 
-# Debugger Files
-*.pdb
+# ── IDE / editors ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# debug information files
-*.dwo
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
