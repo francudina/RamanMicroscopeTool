@@ -96,6 +96,7 @@ export default function App() {
   const [resultsOpen, setResultsOpen] = useState(false)
   // Desktop sidebar collapse
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [resultsCollapsed, setResultsCollapsed] = useState(false)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
@@ -529,16 +530,36 @@ export default function App() {
 
         {/* Right panel — desktop only */}
         {hasGenerated && (
-          <aside className="hidden md:flex md:flex-col w-72 shrink-0 bg-gray-50 dark:bg-[#1e1e1e] border-l border-gray-200 dark:border-[#3a3a3a] overflow-y-auto p-3 shadow-sm">
-            <ScanResults
-              result={scanResult}
-              displayUnit={displayUnit}
-              isLoading={isLoading}
-              error={error}
-              focusMode={focusMode}
-              hoveredPass={hoveredPass}
-              onPassHover={setHoveredPass}
-            />
+          <aside className={`hidden md:flex md:flex-col shrink-0 bg-gray-50 dark:bg-[#1e1e1e] border-l border-gray-200 dark:border-[#3a3a3a] shadow-sm transition-all duration-200 ${resultsCollapsed ? 'w-10' : 'w-72'}`}>
+            {/* Collapse toggle strip */}
+            <div className="flex items-center justify-between px-2 py-2 border-b border-gray-200 dark:border-[#2e2e2e] shrink-0">
+              {!resultsCollapsed && (
+                <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-[#666] select-none">Results</span>
+              )}
+              <button
+                onClick={() => setResultsCollapsed((v) => !v)}
+                className={`flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 dark:hover:bg-[#333] text-gray-400 dark:text-[#666] transition-colors ${resultsCollapsed ? 'mx-auto' : 'ml-auto'}`}
+                title={resultsCollapsed ? 'Expand results' : 'Collapse results'}
+              >
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                  <path d={resultsCollapsed ? 'M10 4l-4 4 4 4' : 'M6 4l4 4-4 4'} />
+                </svg>
+              </button>
+            </div>
+            {/* Scrollable content */}
+            {!resultsCollapsed && (
+              <div className="flex-1 overflow-y-auto p-3">
+                <ScanResults
+                  result={scanResult}
+                  displayUnit={displayUnit}
+                  isLoading={isLoading}
+                  error={error}
+                  focusMode={focusMode}
+                  hoveredPass={hoveredPass}
+                  onPassHover={setHoveredPass}
+                />
+              </div>
+            )}
           </aside>
         )}
       </div>

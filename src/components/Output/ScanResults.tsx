@@ -35,9 +35,11 @@ function buildCopyText(result: ScanResult, displayUnit: DisplayUnit): string {
   result.passes.forEach((pass) => {
     lines.push(`Pass ${pass.pass_number}:`)
     lines.push(`  Start (X, Y):  ${fmt(pass.start_point.x)}  ,  ${fmt(pass.start_point.y)}`)
-    lines.push(`  ΔX:  ${fmt(pass.delta_x)}`)
-    lines.push(`  ΔY:  ${fmt(pass.delta_y)}`)
-    lines.push(`  Nx:  ${pass.nx}   Ny:  ${pass.ny}   →  ${pass.nx} × ${pass.ny} = ${fmtCount(pass.total_points)} points`)
+    lines.push(`  Step X:  ${fmt(pass.delta_x)}`)
+    lines.push(`  Step Y:  ${fmt(pass.delta_y)}`)
+    lines.push(`  Dots X:  ${fmtCount(pass.nx)}`)
+    lines.push(`  Dots Y:  ${fmtCount(pass.ny)}`)
+    lines.push(`  Points:  ${fmtCount(pass.total_points)}  (${pass.nx} cols x ${pass.ny} rows)`)
     lines.push(`  Area:  ${fmtMm2(pass.area_mm2)}`)
     lines.push('')
   })
@@ -59,6 +61,7 @@ function buildCopyText(result: ScanResult, displayUnit: DisplayUnit): string {
 export default function ScanResults({ result, displayUnit, isLoading, error, focusMode, hoveredPass, onPassHover }: Props) {
   const [copied, setCopied] = useState(false)
   const [detailPass, setDetailPass] = useState<ScanPass | null>(null)
+  const [loadingPass, setLoadingPass] = useState<number | null>(null)
   const passRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   useEffect(() => {
@@ -155,15 +158,22 @@ export default function ScanResults({ result, displayUnit, isLoading, error, foc
             >
               <span>Pass {pass.pass_number}</span>
               <div className="flex items-center gap-2">
-                <span className="font-mono">{pass.nx} × {pass.ny} = {fmtCount(pass.total_points)} pts</span>
+                <span className="font-mono">{fmtCount(pass.total_points)} pts</span>
                 <button
-                  onClick={() => setDetailPass(pass)}
-                  className="text-[9px] px-1.5 py-0.5 rounded border font-semibold uppercase tracking-wide transition-colors"
+                  onClick={() => {
+                    setLoadingPass(pass.pass_number)
+                    setTimeout(() => { setDetailPass(pass); setLoadingPass(null) }, 50)
+                  }}
+                  className="text-[9px] px-1.5 py-0.5 rounded border font-semibold uppercase tracking-wide transition-colors min-w-[48px] flex items-center justify-center gap-1"
                   style={{ borderColor: color + '88', color, background: color + '18' }}
                   onMouseEnter={e => (e.currentTarget.style.background = color + '33')}
                   onMouseLeave={e => (e.currentTarget.style.background = color + '18')}
                 >
-                  Details
+                  {loadingPass === pass.pass_number ? (
+                    <svg className="w-2.5 h-2.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeDashoffset="15" strokeLinecap="round"/>
+                    </svg>
+                  ) : 'Details'}
                 </button>
               </div>
             </div>
@@ -171,16 +181,24 @@ export default function ScanResults({ result, displayUnit, isLoading, error, foc
               {[
                 { label: 'Start X', val: fmt(pass.start_point.x) },
                 { label: 'Start Y', val: fmt(pass.start_point.y) },
-                { label: 'ΔX', val: fmt(pass.delta_x) },
-                { label: 'ΔY', val: fmt(pass.delta_y) },
-                { label: 'Nx', val: String(pass.nx) },
-                { label: 'Ny', val: String(pass.ny) },
+                { label: 'Step X', val: fmt(pass.delta_x) },
+                { label: 'Step Y', val: fmt(pass.delta_y) },
+                { label: 'Dots X', val: fmtCount(pass.nx) },
+                { label: 'Dots Y', val: fmtCount(pass.ny) },
               ].map(({ label, val }) => (
                 <div key={label}>
                   <span className="text-[9px] text-gray-400 dark:text-[#666] uppercase tracking-wide block">{label}</span>
                   <span className="text-xs font-mono text-gray-800 dark:text-[#d4d4d4]">{val}</span>
                 </div>
               ))}
+              {/* Points — full width, prominent */}
+              <div className="col-span-2 border-t border-gray-200 dark:border-[#333] pt-1.5 mt-0.5">
+                <span className="text-[9px] text-gray-400 dark:text-[#666] uppercase tracking-wide block">Points</span>
+                <span className="text-xs font-mono text-gray-800 dark:text-[#d4d4d4]">
+                  {fmtCount(pass.total_points)}
+                  <span className="text-[9px] text-gray-400 dark:text-[#666] ml-1.5">({pass.nx} cols × {pass.ny} rows)</span>
+                </span>
+              </div>
               <div className="col-span-2 border-t border-gray-200 dark:border-[#333] pt-1.5 mt-0.5">
                 <span className="text-[9px] text-gray-400 dark:text-[#666] uppercase tracking-wide block">Area</span>
                 <span className="text-[11px] font-mono text-gray-600 dark:text-[#aaa]">{fmtAreaDisplay(pass.area_mm2 * 1e6, displayUnit)}</span>
