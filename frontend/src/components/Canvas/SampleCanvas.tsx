@@ -905,6 +905,67 @@ export default function SampleCanvas({
         </Layer>
       </Stage>
 
+      {/* Canvas controls — bottom-right */}
+      <div className="absolute bottom-3 right-3 flex flex-col items-center gap-1.5 z-20 select-none">
+        {/* Zoom */}
+        <div className="flex flex-col rounded overflow-hidden shadow border border-gray-200 dark:border-[#3a3a3a]">
+          {([
+            { label: '+', title: 'Zoom in',  factor: 1.3 },
+            { label: '−', title: 'Zoom out', factor: 1 / 1.3 },
+          ] as const).map(({ label, title, factor }) => (
+            <button
+              key={label}
+              title={title}
+              onClick={() =>
+                setVp((v) =>
+                  zoomViewport(
+                    v,
+                    v.left + size.w / v.scale / 2,
+                    v.top  + size.h / v.scale / 2,
+                    factor,
+                  )
+                )
+              }
+              className="w-7 h-7 flex items-center justify-center text-sm font-bold leading-none
+                bg-white/90 dark:bg-[#2c2c2c]/90 text-gray-600 dark:text-[#aaa]
+                hover:bg-gray-100 dark:hover:bg-[#3a3a3a] transition-colors backdrop-blur-sm
+                border-b border-gray-200 dark:border-[#3a3a3a] last:border-b-0"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* D-pad */}
+        <div className="grid grid-cols-3 gap-0.5">
+          {([
+            { label: '↑', col: 2, row: 1, dx:  0,    dy: -0.25 },
+            { label: '←', col: 1, row: 2, dx: -0.25, dy:  0    },
+            { label: '↓', col: 2, row: 2, dx:  0,    dy:  0.25 },
+            { label: '→', col: 3, row: 2, dx:  0.25, dy:  0    },
+          ] as const).map(({ label, col, row, dx, dy }) => (
+            <button
+              key={label}
+              title={label === '↑' ? 'Pan up' : label === '↓' ? 'Pan down' : label === '←' ? 'Pan left' : 'Pan right'}
+              onClick={() =>
+                setVp((v) => ({
+                  ...v,
+                  left: v.left + dx * size.w / v.scale,
+                  top:  v.top  + dy * size.h / v.scale,
+                }))
+              }
+              style={{ gridColumn: col, gridRow: row }}
+              className="w-7 h-7 flex items-center justify-center text-sm leading-none rounded shadow
+                bg-white/90 dark:bg-[#2c2c2c]/90 border border-gray-200 dark:border-[#3a3a3a]
+                text-gray-600 dark:text-[#aaa] hover:bg-gray-100 dark:hover:bg-[#3a3a3a]
+                transition-colors backdrop-blur-sm"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Hover tooltip */}
       {hoverInfo && (
         <div
