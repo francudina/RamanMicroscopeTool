@@ -9,6 +9,7 @@ import {
   fmtMm2,
   fmtTime,
 } from '../../utils/units'
+import { analytics } from '../../utils/analytics'
 
 interface Props {
   result: ScanResult | null
@@ -26,7 +27,7 @@ function buildCopyText(result: ScanResult, displayUnit: DisplayUnit): string {
   const d = DISPLAY_UNIT_OPTIONS.find((o) => o.value === displayUnit)!.decimals
   const fmt = (um: number) => fmtDisplay(um, displayUnit, d)
   const lines: string[] = [
-    '=== DXR3 Raman Scan Configuration ===',
+    '=== Raman Scan Configuration ===',
     `Unit: ${displayUnit}`,
     '',
   ]
@@ -70,6 +71,7 @@ export default function ScanResults({ result, displayUnit, isLoading, error, foc
     if (!result) return
     await navigator.clipboard.writeText(buildCopyText(result, displayUnit))
     setCopied(true)
+    analytics.scanCopied()
     setTimeout(() => setCopied(false), 2000)
   }
 
@@ -95,7 +97,7 @@ export default function ScanResults({ result, displayUnit, isLoading, error, foc
       <div className="text-xs text-gray-400 dark:text-[#555] text-center py-8 leading-relaxed">
         Define a shape and click{' '}
         <strong className="text-gray-500 dark:text-[#888]">Generate Scan</strong>{' '}
-        to see DXR3 parameters here.
+        to see scan parameters here.
       </div>
     )
   }
@@ -104,7 +106,7 @@ export default function ScanResults({ result, displayUnit, isLoading, error, foc
     <div className="space-y-2.5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-[#888]">DXR3 Parameters</h3>
+        <h3 className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-[#888]">Scan Parameters</h3>
         <button
           onClick={handleCopy}
           className="text-[10px] px-2 py-1 rounded border border-gray-200 dark:border-[#3a3a3a] text-gray-500 dark:text-[#888] hover:border-blue-400 hover:text-blue-500 dark:hover:border-[#4a9eff] dark:hover:text-[#4a9eff] transition-colors"
@@ -209,7 +211,7 @@ export default function ScanResults({ result, displayUnit, isLoading, error, foc
 
       {/* Print button */}
       <button
-        onClick={() => window.print()}
+        onClick={() => { analytics.scanExported('print'); window.print() }}
         className="w-full py-1.5 rounded border border-gray-200 dark:border-[#3a3a3a] text-gray-400 dark:text-[#666] text-xs hover:border-gray-300 dark:hover:border-[#555] hover:text-gray-600 dark:hover:text-[#999] transition-colors"
       >
         Print / Export

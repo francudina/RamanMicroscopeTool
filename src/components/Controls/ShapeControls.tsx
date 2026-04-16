@@ -14,6 +14,7 @@ import {
   umToDisplay,
 } from '../../utils/units'
 import Tooltip from '../UI/Tooltip'
+import { analytics } from '../../utils/analytics'
 
 interface Props {
   shape: SampleShape | null
@@ -103,6 +104,7 @@ export default function ShapeControls({
   const opts = DISPLAY_UNIT_OPTIONS.find((o) => o.value === displayUnit)!
 
   const setShapeType = (type: ShapeType) => {
+    analytics.shapeTypeSelected(type)
     if (type === 'rectangle') {
       onShapeChange({ type, rect: shape?.rect ?? { x: 0, y: 0, width: mmToUm(10), height: mmToUm(5) } })
     } else if (type === 'circle') {
@@ -141,7 +143,7 @@ export default function ShapeControls({
           {drawModes.map((m) => (
             <Tooltip key={m.value} text={m.hint} side="top">
               <button
-                onClick={() => onDrawModeChange(m.value)}
+                onClick={() => { analytics.drawModeSelected(m.value); onDrawModeChange(m.value) }}
                 className={`w-full flex flex-col items-center justify-center py-2 rounded border text-xs transition-colors ${drawMode === m.value ? activeBtn : idleBtn}`}
               >
                 {m.value === 'select' ? (
@@ -280,7 +282,9 @@ export default function ShapeControls({
 
               const removePoint = () => {
                 if (pts.length <= 3) return
-                onShapeChange({ ...shape, freeform: { points: pts.filter((_, j) => j !== i) } })
+                const newPts = pts.filter((_, j) => j !== i)
+                analytics.freeformPointRemoved(newPts.length)
+                onShapeChange({ ...shape, freeform: { points: newPts } })
               }
 
               const rowBase = 'rounded px-1 py-0.5 transition-colors border'
@@ -339,7 +343,9 @@ export default function ShapeControls({
               onClick={() => {
                 const pts = shape.freeform!.points
                 const last = pts[pts.length - 1]
-                onShapeChange({ ...shape, freeform: { points: [...pts, { x: last.x + displayToUm(1, displayUnit), y: last.y }] } })
+                const newPts = [...pts, { x: last.x + displayToUm(1, displayUnit), y: last.y }]
+                analytics.freeformPointAdded(newPts.length)
+                onShapeChange({ ...shape, freeform: { points: newPts } })
               }}
               className="w-full flex items-center justify-center gap-2 px-4 py-1.5 rounded border border-blue-400 text-blue-500 text-xs font-semibold hover:bg-blue-400 hover:text-white transition-colors shadow dark:border-[#4a9eff] dark:text-[#4a9eff] dark:hover:bg-[#4a9eff] dark:hover:text-white"
             >
@@ -355,7 +361,7 @@ export default function ShapeControls({
       {shape && (
         <Tooltip text="Remove the current shape and start over" side="right">
           <button
-            onClick={onClear}
+            onClick={() => { analytics.shapeCleared(); onClear() }}
             className="w-full flex items-center justify-center gap-2 px-4 py-1.5 rounded border border-red-400 text-red-400 text-xs font-semibold hover:bg-red-400 hover:text-white transition-colors shadow dark:border-red-500 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white"
           >
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0">

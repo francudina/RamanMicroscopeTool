@@ -18,6 +18,7 @@ import {
   fmtDisplay,
   mmToUm,
 } from './utils/units'
+import { analytics } from './utils/analytics'
 
 const DEFAULT_SCAN_PARAMS: ScanParameters = {
   step_x: 50,
@@ -168,6 +169,7 @@ export default function App() {
       const result = generateScanGrid(shape, scanParams, stage)
       setScanResult(result)
       setDrawMode('select')
+      analytics.scanGenerated(result.total_points, shape.type, scanParams.step_x)
       // Auto-open results sheet on mobile
       if (window.innerWidth < 768) setResultsOpen(true)
     } catch (err: unknown) {
@@ -206,13 +208,26 @@ export default function App() {
             </svg>
           </button>
 
-          <div className="w-7 h-7 rounded bg-[#4a9eff] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow">
-            R
+          <div className="w-7 h-7 rounded shrink-0 shadow overflow-hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" className="w-full h-full">
+              <rect width="32" height="32" rx="6" fill="#1e40af"/>
+              <circle cx="8"  cy="8"  r="2" fill="#93c5fd"/>
+              <circle cx="16" cy="8"  r="2" fill="#93c5fd"/>
+              <circle cx="24" cy="8"  r="2" fill="#93c5fd"/>
+              <circle cx="8"  cy="16" r="2" fill="#93c5fd"/>
+              <circle cx="16" cy="16" r="2" fill="#ffffff"/>
+              <circle cx="24" cy="16" r="2" fill="#93c5fd"/>
+              <circle cx="8"  cy="24" r="2" fill="#93c5fd"/>
+              <circle cx="16" cy="24" r="2" fill="#93c5fd"/>
+              <circle cx="24" cy="24" r="2" fill="#93c5fd"/>
+              <line x1="16" y1="10" x2="16" y2="22" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="10" y1="16" x2="22" y2="16" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
           </div>
           <div className="hidden sm:block min-w-0">
-            <h1 className="text-sm font-semibold text-gray-900 dark:text-[#e0e0e0] truncate">DXR3 Raman Scan Planner</h1>
+            <h1 className="text-sm font-semibold text-gray-900 dark:text-[#e0e0e0] truncate">Raman Scan Planner</h1>
             <p className="text-[10px] text-gray-400 dark:text-[#666] hidden md:block">
-              Define sample shape → compute DXR3 scan grid parameters
+              Define sample shape → compute scan grid parameters
             </p>
           </div>
         </div>
@@ -243,7 +258,11 @@ export default function App() {
                 <div className="p-2.5 space-y-1">
                   <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-400 dark:text-[#666] mb-2">Theme</p>
                   <button
-                    onClick={() => setDarkMode((v) => !v)}
+                    onClick={() => setDarkMode((v) => {
+                      const next = !v
+                      analytics.themeToggled(next ? 'dark' : 'light')
+                      return next
+                    })}
                     className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors text-gray-700 dark:text-[#d4d4d4] hover:bg-gray-100 dark:hover:bg-[#333]"
                   >
                     {darkMode ? (
@@ -284,7 +303,11 @@ export default function App() {
             <span className="text-[10px] text-gray-400 dark:text-[#666] uppercase tracking-wide hidden sm:inline">Unit</span>
             <select
               value={displayUnit}
-              onChange={(e) => setDisplayUnit(e.target.value as DisplayUnit)}
+              onChange={(e) => {
+                const u = e.target.value as DisplayUnit
+                setDisplayUnit(u)
+                analytics.unitChanged(u)
+              }}
               className="border border-gray-200 dark:border-[#3a3a3a] rounded px-2 py-1 text-xs text-gray-700 dark:text-[#d4d4d4] bg-white dark:bg-[#2c2c2c] focus:outline-none focus:border-blue-400 dark:focus:border-[#4a9eff] cursor-pointer"
             >
               {DISPLAY_UNIT_OPTIONS.map((opt) => (

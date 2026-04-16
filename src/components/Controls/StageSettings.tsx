@@ -9,6 +9,7 @@ import {
   umToDisplay,
 } from '../../utils/units'
 import Tooltip from '../UI/Tooltip'
+import { analytics } from '../../utils/analytics'
 
 interface Props {
   constraints: StageConstraints
@@ -73,7 +74,7 @@ export default function StageSettings({ constraints, displayUnit, onChange }: Pr
   return (
     <section className="space-y-3">
       {/* Size — Width and Height each on their own line */}
-      <Tooltip text="Maximum horizontal and vertical scan range of the DXR3 stage" side="right">
+      <Tooltip text="Maximum horizontal and vertical scan range of the stage" side="right">
         <div className="space-y-0.5">
           <span className={LABEL_CLS}>Stage Size</span>
           <div className={ROW_CLS + ' w-full'}>
@@ -118,9 +119,9 @@ export default function StageSettings({ constraints, displayUnit, onChange }: Pr
         </div>
       </Tooltip>
 
-      {/* DXR3 presets */}
+      {/* Stage presets */}
       <div className="flex flex-col gap-0.5">
-        <span className={LABEL_CLS}>DXR3 Presets</span>
+        <span className={LABEL_CLS}>Stage Presets</span>
         <select
           className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 font-mono cursor-pointer
             focus:outline-none focus:border-blue-400 transition-colors
@@ -128,7 +129,10 @@ export default function StageSettings({ constraints, displayUnit, onChange }: Pr
           value=""
           onChange={(e) => {
             const [w, h] = e.target.value.split(',').map(Number)
-            if (!isNaN(w)) set({ max_scan_width: w, max_scan_height: h })
+            if (!isNaN(w)) {
+              set({ max_scan_width: w, max_scan_height: h })
+              analytics.stagePresetApplied(w / 1000, h / 1000)
+            }
           }}
         >
           <option value="" disabled>Select stage size…</option>
