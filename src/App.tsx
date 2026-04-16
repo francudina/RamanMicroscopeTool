@@ -264,7 +264,7 @@ export default function App() {
             </svg>
           </div>
           <div className="hidden sm:block min-w-0">
-            <h1 className="text-sm font-semibold text-gray-900 dark:text-[#e0e0e0] truncate">Raman Scan Planner</h1>
+            <h1 className="text-sm font-semibold text-gray-900 dark:text-[#e0e0e0] truncate">Raman Scan Planner <span className="text-[10px] font-normal text-gray-400 dark:text-[#666]">v1.0.0</span></h1>
             <p className="text-[10px] text-gray-400 dark:text-[#666] hidden md:block">
               Define sample shape → compute scan grid parameters
             </p>
