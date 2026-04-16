@@ -133,6 +133,25 @@ export default function ScanResults({ result, displayUnit, isLoading, error, foc
         </div>
       )}
 
+      {/* Summary */}
+      <div className="rounded border border-gray-200 dark:border-[#333] bg-white dark:bg-[#252525] px-3 py-2 space-y-1.5">
+        {[
+          { label: 'Total points', val: fmtCount(result.total_points) },
+          { label: 'Total area', val: fmtAreaDisplay(result.total_area_mm2 * 1e6, displayUnit) },
+          { label: 'Estimated time', val: fmtTime(result.estimated_time_minutes) },
+        ].map(({ label, val }) => (
+          <div key={label} className="flex justify-between text-xs">
+            <span className="text-gray-400 dark:text-[#666]">{label}</span>
+            <span className="font-mono text-gray-800 dark:text-[#d4d4d4]">{val}</span>
+          </div>
+        ))}
+        {result.requires_multiple_passes && (
+          <div className="pt-1 border-t border-gray-200 dark:border-[#333] text-[10px] text-amber-600 dark:text-amber-400">
+            {result.passes.length} passes — reposition stage between each pass.
+          </div>
+        )}
+      </div>
+
       {/* Per-pass blocks */}
       {result.passes.map((pass, idx) => {
         const color = PASS_COLORS[idx % PASS_COLORS.length]
@@ -207,33 +226,6 @@ export default function ScanResults({ result, displayUnit, isLoading, error, foc
           </div>
         )
       })}
-
-      {/* Summary */}
-      <div className="rounded border border-gray-200 dark:border-[#333] bg-white dark:bg-[#252525] px-3 py-2 space-y-1.5">
-        {[
-          { label: 'Total points', val: fmtCount(result.total_points) },
-          { label: 'Total area', val: fmtAreaDisplay(result.total_area_mm2 * 1e6, displayUnit) },
-          { label: 'Estimated time', val: fmtTime(result.estimated_time_minutes) },
-        ].map(({ label, val }) => (
-          <div key={label} className="flex justify-between text-xs">
-            <span className="text-gray-400 dark:text-[#666]">{label}</span>
-            <span className="font-mono text-gray-800 dark:text-[#d4d4d4]">{val}</span>
-          </div>
-        ))}
-        {result.requires_multiple_passes && (
-          <div className="pt-1 border-t border-gray-200 dark:border-[#333] text-[10px] text-amber-600 dark:text-amber-400">
-            {result.passes.length} passes — reposition stage between each pass.
-          </div>
-        )}
-      </div>
-
-      {/* Print button */}
-      <button
-        onClick={() => { analytics.scanExported('print'); window.print() }}
-        className="w-full py-1.5 rounded border border-gray-200 dark:border-[#3a3a3a] text-gray-400 dark:text-[#666] text-xs hover:border-gray-300 dark:hover:border-[#555] hover:text-gray-600 dark:hover:text-[#999] transition-colors"
-      >
-        Print / Export
-      </button>
 
       {/* Pass dots detail modal */}
       {detailPass && (() => {

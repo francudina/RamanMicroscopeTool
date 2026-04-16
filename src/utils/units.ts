@@ -91,12 +91,9 @@ export function fmtAreaDisplay(um2: number, unit: DisplayUnit): string {
   }
 }
 
-/**
- * Format an integer count, using scientific notation for large values (≥ 10 000).
- * Mantissa is given 1 decimal place (e.g. 1.2×10⁶).
- */
+/** Format an integer count with thousand separators (e.g. 31,000). */
 export function fmtCount(n: number): string {
-  return needsSci(n) ? sciStr(n, 1) : n.toLocaleString()
+  return Math.round(n).toLocaleString()
 }
 
 /** Format mm², switching to cm² for large values and sci notation for tiny ones. */

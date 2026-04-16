@@ -117,6 +117,7 @@ export default function App() {
     () => document.documentElement.classList.contains('dark')
   )
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
 
   // Mobile panel state
@@ -342,6 +343,17 @@ export default function App() {
                       <span className={`w-7 h-4 rounded-full transition-colors flex items-center px-0.5 shrink-0 ${focusMode ? 'bg-blue-500' : 'bg-gray-300 dark:bg-[#444]'}`}>
                         <span className={`w-3 h-3 rounded-full bg-white shadow transition-transform ${focusMode ? 'translate-x-3' : 'translate-x-0'}`} />
                       </span>
+                    </button>
+                  </div>
+                  <div className="border-t border-gray-100 dark:border-[#333] pt-1.5 mt-1">
+                    <button
+                      onClick={() => { setHelpOpen(true); setSettingsOpen(false) }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors text-gray-700 dark:text-[#d4d4d4] hover:bg-gray-100 dark:hover:bg-[#333]"
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-gray-400 dark:text-[#666] shrink-0">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 10a3 3 0 01-2 2.83V13a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" />
+                      </svg>
+                      Help
                     </button>
                   </div>
                 </div>
@@ -620,6 +632,66 @@ export default function App() {
           </aside>
         )}
       </div>
+
+      {/* ── Help modal ───────────────────────────────────────────────────── */}
+      {helpOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setHelpOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-lg border shadow-xl bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-[#3a3a3a] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-[#2e2e2e]">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-[#4a9eff]">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 10a3 3 0 01-2 2.83V13a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-800 dark:text-[#e0e0e0]">Help</span>
+              </div>
+              <button
+                onClick={() => setHelpOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-[#ccc] transition-colors p-1 -mr-1 rounded"
+              >
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-4 h-4">
+                  <path d="M4 4l8 8M12 4l-8 8" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="px-4 py-4 space-y-4 text-sm text-gray-600 dark:text-[#b0b0b0] leading-relaxed">
+              <div>
+                <p className="font-semibold text-gray-800 dark:text-[#e0e0e0] mb-1">What is Raman Scan Planner?</p>
+                <p>A tool for planning Raman microscopy scan grids. Define your sample shape on the canvas, configure scan parameters, and generate an optimised point grid, before touching the instrument.</p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-800 dark:text-[#e0e0e0]">Workflow</p>
+                <ol className="space-y-1.5 list-none">
+                  {[
+                    ['1', 'Draw Shape', 'Use the canvas to draw a rectangle, circle, or freeform polygon around your sample area.'],
+                    ['2', 'Set Parameters', 'Choose step size (or target dot count) and overlap in the Scan Parameters panel.'],
+                    ['3', 'Set Stage', 'Enter your stage constraints: max scan width/height and time per point.'],
+                    ['4', 'Generate', 'Click Generate Scan to compute the grid. Results show pass count, total points, and estimated time.'],
+                  ].map(([num, title, desc]) => (
+                    <li key={num} className="flex gap-2.5">
+                      <span className="mt-0.5 w-5 h-5 rounded-full bg-[#4a9eff]/15 text-[#4a9eff] text-[10px] font-bold flex items-center justify-center shrink-0">{num}</span>
+                      <span><span className="font-medium text-gray-700 dark:text-[#d4d4d4]">{title}: </span>{desc}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-[#2e2e2e] pt-3 text-xs text-gray-400 dark:text-[#666]">
+                All units can be switched between µm, mm, and cm in the header. Hover over scan dots on the canvas for position details.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
