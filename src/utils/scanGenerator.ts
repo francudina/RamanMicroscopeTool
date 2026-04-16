@@ -8,7 +8,7 @@ import type {
 
 // ── Bounding box ───────────────────────────────────────────────────────────────
 
-function getBoundingBox(shape: SampleShape): [number, number, number, number] {
+export function getBoundingBox(shape: SampleShape): [number, number, number, number] {
   if (shape.type === 'rectangle' && shape.rect) {
     const r = shape.rect
     return [r.x, r.y, r.x + r.width, r.y + r.height]

@@ -13,6 +13,12 @@ interface Props {
   params: ScanParameters
   displayUnit: DisplayUnit
   onChange: (params: ScanParameters) => void
+  inputMode: 'step' | 'count'
+  onInputModeChange: (mode: 'step' | 'count') => void
+  targetNx: number
+  targetNy: number
+  onTargetNxChange: (n: number) => void
+  onTargetNyChange: (n: number) => void
 }
 
 const INPUT_CLS =
@@ -67,38 +73,92 @@ function NumericInput({
 
 const PRESETS_UM = [1, 5, 10, 25, 50, 100, 500, 1000]
 
-export default function ScanParamsForm({ params, displayUnit, onChange }: Props) {
+export default function ScanParamsForm({
+  params, displayUnit, onChange,
+  inputMode, onInputModeChange,
+  targetNx, targetNy, onTargetNxChange, onTargetNyChange,
+}: Props) {
   const set = (patch: Partial<ScanParameters>) => onChange({ ...params, ...patch })
   const opts = DISPLAY_UNIT_OPTIONS.find((o) => o.value === displayUnit)!
 
   return (
     <section className="space-y-3">
-      {/* Offset rows — X and Y each on their own line */}
-      <Tooltip text="Distance between adjacent scan points (ΔX horizontal, ΔY vertical)" side="right">
-        <div className="space-y-0.5">
-          <span className={LABEL_CLS}>Offset</span>
-          <div className={ROW_CLS + ' w-full'}>
-            <span className={AXIS_CLS + ' w-4 shrink-0'}>X</span>
-            <NumericInput
-              value={umToDisplay(params.step_x, displayUnit)}
-              onChange={(v) => set({ step_x: Math.max(0.001, displayToUm(v, displayUnit)) })}
-              step={opts.step}
-              className={INPUT_CLS + ' flex-1'}
-            />
-            <span className={AXIS_CLS + ' w-10 text-right shrink-0'}>{displayUnit}</span>
+
+      {/* Mode toggle */}
+      <div className="flex rounded border border-gray-200 dark:border-[#3a3a3a] overflow-hidden text-[10px] font-semibold uppercase tracking-wide">
+        {(['step', 'count'] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => onInputModeChange(m)}
+            className={`flex-1 py-1 transition-colors ${
+              inputMode === m
+                ? 'bg-blue-500 text-white dark:bg-[#4a9eff]'
+                : 'text-gray-500 dark:text-[#888] hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'
+            }`}
+          >
+            {m === 'step' ? 'Offset' : 'Dot Count'}
+          </button>
+        ))}
+      </div>
+
+      {inputMode === 'step' ? (
+        /* ── Step / offset mode ────────────────────────────────────────────── */
+        <Tooltip text="Distance between adjacent scan points (X horizontal, Y vertical)" side="right">
+          <div className="space-y-0.5">
+            <span className={LABEL_CLS}>Offset</span>
+            <div className={ROW_CLS + ' w-full'}>
+              <span className={AXIS_CLS + ' w-4 shrink-0'}>X</span>
+              <NumericInput
+                value={umToDisplay(params.step_x, displayUnit)}
+                onChange={(v) => set({ step_x: Math.max(0.001, displayToUm(v, displayUnit)) })}
+                step={opts.step}
+                className={INPUT_CLS + ' flex-1'}
+              />
+              <span className={AXIS_CLS + ' w-10 text-right shrink-0'}>{displayUnit}</span>
+            </div>
+            <div className={ROW_CLS + ' w-full'}>
+              <span className={AXIS_CLS + ' w-4 shrink-0'}>Y</span>
+              <NumericInput
+                value={umToDisplay(params.step_y, displayUnit)}
+                onChange={(v) => set({ step_y: Math.max(0.001, displayToUm(v, displayUnit)) })}
+                step={opts.step}
+                className={INPUT_CLS + ' flex-1'}
+              />
+              <span className={AXIS_CLS + ' w-10 text-right shrink-0'}>{displayUnit}</span>
+            </div>
           </div>
-          <div className={ROW_CLS + ' w-full'}>
-            <span className={AXIS_CLS + ' w-4 shrink-0'}>Y</span>
-            <NumericInput
-              value={umToDisplay(params.step_y, displayUnit)}
-              onChange={(v) => set({ step_y: Math.max(0.001, displayToUm(v, displayUnit)) })}
-              step={opts.step}
-              className={INPUT_CLS + ' flex-1'}
-            />
-            <span className={AXIS_CLS + ' w-10 text-right shrink-0'}>{displayUnit}</span>
+        </Tooltip>
+      ) : (
+        /* ── Dot count mode ────────────────────────────────────────────────── */
+        <Tooltip text="Number of scan points along X and Y axes. Step size is computed from the stage max scan area." side="right">
+          <div className="space-y-0.5">
+            <span className={LABEL_CLS}>Dot Count</span>
+            <div className={ROW_CLS + ' w-full'}>
+              <span className={AXIS_CLS + ' w-4 shrink-0'}>X</span>
+              <NumericInput
+                value={targetNx}
+                onChange={(v) => onTargetNxChange(Math.max(1, Math.round(v)))}
+                step={1}
+                className={INPUT_CLS + ' flex-1'}
+              />
+              <span className={AXIS_CLS + ' w-10 text-right shrink-0'}>dots</span>
+            </div>
+            <div className={ROW_CLS + ' w-full'}>
+              <span className={AXIS_CLS + ' w-4 shrink-0'}>Y</span>
+              <NumericInput
+                value={targetNy}
+                onChange={(v) => onTargetNyChange(Math.max(1, Math.round(v)))}
+                step={1}
+                className={INPUT_CLS + ' flex-1'}
+              />
+              <span className={AXIS_CLS + ' w-10 text-right shrink-0'}>dots</span>
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-[#555] px-1 pt-0.5 leading-relaxed">
+              Step is derived from shape size at generate time.
+            </p>
           </div>
-        </div>
-      </Tooltip>
+        </Tooltip>
+      )}
 
       {/* Overlap */}
       <div className="flex flex-col gap-1">
@@ -117,35 +177,37 @@ export default function ScanParamsForm({ params, displayUnit, onChange }: Props)
             </span>
           </div>
         </Tooltip>
-        {params.overlap > 0 && (
+        {params.overlap > 0 && inputMode === 'step' && (
           <span className="text-[10px] font-mono leading-relaxed text-gray-400 dark:text-[#555] px-1">
-            eff ΔX: {fmtDisplay(params.step_x * (1 - params.overlap), displayUnit, opts.decimals)}
-            &nbsp;&nbsp;ΔY: {fmtDisplay(params.step_y * (1 - params.overlap), displayUnit, opts.decimals)}
+            eff X: {fmtDisplay(params.step_x * (1 - params.overlap), displayUnit, opts.decimals)}
+            &nbsp;&nbsp;Y: {fmtDisplay(params.step_y * (1 - params.overlap), displayUnit, opts.decimals)}
           </span>
         )}
       </div>
 
-      {/* Quick presets */}
-      <div className="flex flex-col gap-0.5">
-        <span className={LABEL_CLS}>Quick Presets</span>
-        <select
-          className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 font-mono cursor-pointer
-            focus:outline-none focus:border-blue-400 transition-colors
-            dark:bg-[#2c2c2c] dark:border-[#3a3a3a] dark:text-[#d4d4d4] dark:focus:border-[#4a9eff]"
-          value=""
-          onChange={(e) => {
-            const um = parseFloat(e.target.value)
-            if (!isNaN(um)) set({ step_x: um, step_y: um })
-          }}
-        >
-          <option value="" disabled>Select step size…</option>
-          {PRESETS_UM.map((um) => (
-            <option key={um} value={um}>
-              {fmtDisplay(um, displayUnit, opts.decimals)}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Quick presets — only in step mode */}
+      {inputMode === 'step' && (
+        <div className="flex flex-col gap-0.5">
+          <span className={LABEL_CLS}>Quick Presets</span>
+          <select
+            className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 font-mono cursor-pointer
+              focus:outline-none focus:border-blue-400 transition-colors
+              dark:bg-[#2c2c2c] dark:border-[#3a3a3a] dark:text-[#d4d4d4] dark:focus:border-[#4a9eff]"
+            value=""
+            onChange={(e) => {
+              const um = parseFloat(e.target.value)
+              if (!isNaN(um)) set({ step_x: um, step_y: um })
+            }}
+          >
+            <option value="" disabled>Select step size…</option>
+            {PRESETS_UM.map((um) => (
+              <option key={um} value={um}>
+                {fmtDisplay(um, displayUnit, opts.decimals)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </section>
   )
 }

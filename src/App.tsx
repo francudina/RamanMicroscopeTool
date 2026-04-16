@@ -81,6 +81,34 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [displayUnit, setDisplayUnit] = useState<DisplayUnit>('mm')
 
+  // Scan input mode: step size or target dot count
+  const [scanInputMode, setScanInputMode] = useState<'step' | 'count'>('step')
+  const [targetNx, setTargetNx] = useState(10)
+  const [targetNy, setTargetNy] = useState(10)
+
+  // Keep offset and dot-count fields in sync based on stage max scan size:
+  //   step = max_scan / (n - 1)  <->  n = round(max_scan / step) + 1
+  const handleScanParamsChange = (p: ScanParameters) => {
+    setScanParams(p)
+    if (p.step_x > 0) setTargetNx(Math.max(2, Math.round(stage.max_scan_width / p.step_x) + 1))
+    if (p.step_y > 0) setTargetNy(Math.max(2, Math.round(stage.max_scan_height / p.step_y) + 1))
+  }
+  const handleTargetNxChange = (nx: number) => {
+    setTargetNx(nx)
+    if (nx > 1) setScanParams(p => ({ ...p, step_x: stage.max_scan_width / (nx - 1) }))
+  }
+  const handleTargetNyChange = (ny: number) => {
+    setTargetNy(ny)
+    if (ny > 1) setScanParams(p => ({ ...p, step_y: stage.max_scan_height / (ny - 1) }))
+  }
+
+  const handleStageChange = (s: StageConstraints) => {
+    setStage(s)
+    // Re-sync dot counts to new stage size
+    if (scanParams.step_x > 0) setTargetNx(Math.max(2, Math.round(s.max_scan_width / scanParams.step_x) + 1))
+    if (scanParams.step_y > 0) setTargetNy(Math.max(2, Math.round(s.max_scan_height / scanParams.step_y) + 1))
+  }
+
   const [hasGenerated, setHasGenerated] = useState(false)
   const [focusMode, setFocusMode] = useState(true)
   const [hoveredPass, setHoveredPass] = useState<number | null>(null)
@@ -167,10 +195,20 @@ export default function App() {
     setError(null)
     setHasGenerated(true)
     try {
-      const result = generateScanGrid(shape, scanParams, stage)
+      let params = scanParams
+      if (scanInputMode === 'count') {
+        const nx = Math.max(1, targetNx)
+        const ny = Math.max(1, targetNy)
+        params = {
+          ...scanParams,
+          step_x: nx > 1 ? stage.max_scan_width / (nx - 1) : stage.max_scan_width,
+          step_y: ny > 1 ? stage.max_scan_height / (ny - 1) : stage.max_scan_height,
+        }
+      }
+      const result = generateScanGrid(shape, params, stage)
       setScanResult(result)
       setDrawMode('select')
-      analytics.scanGenerated(result.total_points, shape.type, scanParams.step_x)
+      analytics.scanGenerated(result.total_points, shape.type, params.step_x)
       // Auto-open results sheet on mobile
       if (window.innerWidth < 768) setResultsOpen(true)
     } catch (err: unknown) {
@@ -421,7 +459,13 @@ export default function App() {
               <ScanParamsForm
                 params={scanParams}
                 displayUnit={displayUnit}
-                onChange={setScanParams}
+                onChange={handleScanParamsChange}
+                inputMode={scanInputMode}
+                onInputModeChange={setScanInputMode}
+                targetNx={targetNx}
+                targetNy={targetNy}
+                onTargetNxChange={handleTargetNxChange}
+                onTargetNyChange={handleTargetNyChange}
               />
             </CollapsiblePanel>
 
@@ -429,7 +473,7 @@ export default function App() {
               <StageSettings
                 constraints={stage}
                 displayUnit={displayUnit}
-                onChange={setStage}
+                onChange={handleStageChange}
               />
             </CollapsiblePanel>
 
