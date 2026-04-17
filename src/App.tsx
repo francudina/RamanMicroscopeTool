@@ -73,7 +73,7 @@ function CollapsiblePanel({
 
 export default function App() {
   const [shape, setShape] = useState<SampleShape | null>(null)
-  const [shapeHistory, setShapeHistory] = useState<(SampleShape | null)[]>([])
+  const [, setShapeHistory] = useState<(SampleShape | null)[]>([])
   const [drawMode, setDrawMode] = useState<DrawMode>('rectangle')
   const [scanParams, setScanParams] = useState<ScanParameters>(DEFAULT_SCAN_PARAMS)
   const [stage, setStage] = useState<StageConstraints>(DEFAULT_STAGE)
