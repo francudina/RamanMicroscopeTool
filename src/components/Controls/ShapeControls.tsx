@@ -106,9 +106,9 @@ export default function ShapeControls({
   const setShapeType = (type: ShapeType) => {
     analytics.shapeTypeSelected(type)
     if (type === 'rectangle') {
-      onShapeChange({ type, rect: shape?.rect ?? { x: 0, y: 0, width: mmToUm(10), height: mmToUm(5) } })
+      onShapeChange({ type, rect: shape?.rect ?? { x: 0, y: 0, width: mmToUm(200), height: mmToUm(100) } })
     } else if (type === 'circle') {
-      onShapeChange({ type, circle: shape?.circle ?? { cx: 0, cy: 0, radius: mmToUm(5) } })
+      onShapeChange({ type, circle: shape?.circle ?? { cx: 0, cy: 0, radius: mmToUm(50) } })
     } else {
       // Derive 4 corners from rectangle so the user can continue editing as freeform
       let points = shape?.freeform?.points
@@ -123,7 +123,7 @@ export default function ShapeControls({
       }
       onShapeChange({
         type: 'freeform',
-        freeform: { points: points ?? [{ x: 0, y: 0 }, { x: mmToUm(10), y: 0 }, { x: mmToUm(10), y: mmToUm(10) }, { x: 0, y: mmToUm(10) }] },
+        freeform: { points: points ?? [{ x: 0, y: 0 }, { x: mmToUm(200), y: 0 }, { x: mmToUm(200), y: mmToUm(100) }, { x: 0, y: mmToUm(100) }] },
       })
     }
     onDrawModeChange('select')
@@ -182,7 +182,7 @@ export default function ShapeControls({
         </div>
         {drawMode === 'freeform' && (
           <p className="mt-1.5 text-[10px] text-blue-600 bg-blue-50 border border-blue-200 rounded px-2 py-1.5 leading-relaxed dark:text-[#4a9eff] dark:bg-[#1a3a5c]/40 dark:border-[#4a9eff]/20">
-            Click to add vertices. Double-click or click near the first point to close.
+            Click to add vertices. Click any existing vertex to resume from it. Click near the first point to close.
           </p>
         )}
       </div>

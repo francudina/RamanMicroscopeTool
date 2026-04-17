@@ -797,6 +797,11 @@ export default function SampleCanvas({
     }
   }, [])
 
+  // Reset draw state when shape is cleared
+  useEffect(() => {
+    if (shape === null) setDrawState({ mode: 'idle' })
+  }, [shape])
+
   // Fit viewport when shape or scan result changes (skip while actively drawing points)
   useEffect(() => {
     if (drawState.mode === 'drawing_freeform') return
@@ -806,57 +811,21 @@ export default function SampleCanvas({
     }
   }, [shape, drawState.mode, size.w, size.h])
 
-  // Convert shape when switching between rectangle ↔ freeform draw modes
+  // Handle draw mode switches — no auto shape conversion; just manage draw state
   useEffect(() => {
     const prev = prevDrawModeRef.current
     prevDrawModeRef.current = drawMode
     if (prev === drawMode) return
 
-    const ds = drawStateRef.current
-
-    if (drawMode === 'freeform' && shape?.type === 'rectangle' && shape.rect) {
-      // Rectangle → Freeform: immediately commit the 4 corners as a freeform shape so
-      // the sidebar shows freeform controls, then enter drawing state so the user can
-      // click to keep adding more vertices.
-      const r = shape.rect
-      const corners: Point[] = [
-        { x: r.x,           y: r.y            },
-        { x: r.x + r.width, y: r.y            },
-        { x: r.x + r.width, y: r.y + r.height },
-        { x: r.x,           y: r.y + r.height },
-      ]
-      onShapeChange({ type: 'freeform', freeform: { points: corners } })
-      setDrawState({
-        mode: 'drawing_freeform',
-        points: corners,
-        preview: null,
-      })
-    } else if (drawMode === 'rectangle') {
-      // Freeform → Rectangle: prefer in-progress drawing points, else finalized shape
-      let pts: Point[] | null = null
-      if (ds.mode === 'drawing_freeform' && ds.points.length >= 3) {
-        pts = ds.points
-      } else if (shape?.type === 'freeform' && shape.freeform) {
-        pts = shape.freeform.points
-      }
-      setDrawState({ mode: 'idle' })
-      if (pts) {
-        const xs = pts.map((p) => p.x)
-        const ys = pts.map((p) => p.y)
-        const xMin = Math.min(...xs), xMax = Math.max(...xs)
-        const yMin = Math.min(...ys), yMax = Math.max(...ys)
-        onShapeChange({ type: 'rectangle', rect: { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin } })
-      }
-    } else if (drawMode === 'freeform' && shape?.type === 'freeform' && shape.freeform) {
-      // Already a committed freeform shape → resume drawing with existing points so
-      // the user can continue adding more vertices.
+    if (drawMode === 'freeform' && shape?.type === 'freeform' && shape.freeform) {
+      // Resume drawing an existing freeform shape from its last vertex
       setDrawState({
         mode: 'drawing_freeform',
         points: shape.freeform.points,
         preview: null,
       })
     } else {
-      // Any other mode switch: cancel active drawing
+      // Any other mode switch: cancel active drawing, keep shape as-is
       setDrawState({ mode: 'idle' })
     }
   }, [drawMode, shape, onShapeChange])
@@ -938,22 +907,46 @@ export default function SampleCanvas({
         setDrawState({ mode: 'drawing_circle', cx: um.x, cy: um.y })
         setPreviewCircle({ cx: um.x, cy: um.y, r: 0 })
       } else if (drawMode === 'freeform') {
-        if (drawState.mode !== 'drawing_freeform') {
+        // Resolve existing points: from active draw state or committed shape
+        const existing: Point[] | null =
+          drawState.mode === 'drawing_freeform'
+            ? drawState.points
+            : shape?.type === 'freeform' && shape.freeform && shape.freeform.points.length > 0
+              ? shape.freeform.points
+              : null
+
+        if (!existing) {
+          // No existing shape — start fresh
           const startPts = [um]
           onShapeChange({ type: 'freeform', freeform: { points: startPts } })
           setDrawState({ mode: 'drawing_freeform', points: startPts, preview: null })
         } else {
-          const existing = drawState.points
-          const first = existing[0]
-          const dx = (um.x - first.x) * vp.scale
-          const dy = (um.y - first.y) * vp.scale
-          if (existing.length >= 3 && Math.sqrt(dx * dx + dy * dy) < 12) {
+          // Check if clicking near any existing vertex
+          const HIT_PX = 12
+          let hitIndex = -1
+          for (let i = 0; i < existing.length; i++) {
+            const dx = (um.x - existing[i].x) * vp.scale
+            const dy = (um.y - existing[i].y) * vp.scale
+            if (Math.sqrt(dx * dx + dy * dy) < HIT_PX) { hitIndex = i; break }
+          }
+
+          if (hitIndex === 0 && existing.length >= 3) {
+            // Click near first point → close polygon
             onShapeChange({ type: 'freeform', freeform: { points: existing } })
             setDrawState({ mode: 'idle' })
+          } else if (hitIndex > 0 && hitIndex < existing.length - 1) {
+            // Click near a middle vertex → rotate so that vertex becomes last, resume from it
+            const rotated = [...existing.slice(hitIndex + 1), ...existing.slice(0, hitIndex + 1)]
+            onShapeChange({ type: 'freeform', freeform: { points: rotated } })
+            setDrawState({ mode: 'drawing_freeform', points: rotated, preview: null })
+          } else if (hitIndex === existing.length - 1) {
+            // Click near last vertex → just re-enter drawing state if not already in it
+            setDrawState({ mode: 'drawing_freeform', points: existing, preview: null })
           } else {
+            // No vertex hit → add new point
             const newPts = [...existing, um]
             onShapeChange({ type: 'freeform', freeform: { points: newPts } })
-            setDrawState({ ...drawState, points: newPts })
+            setDrawState({ mode: 'drawing_freeform', points: newPts, preview: null })
           }
         }
       }
