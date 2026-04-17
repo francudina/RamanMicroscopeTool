@@ -225,7 +225,7 @@ function ShapeRenderer({
           if (angle > 90) angle -= 180
           else if (angle <= -90) angle += 180
           const nextIdx = (i + 1) % pts.length
-          const label = `P${i + 1}–P${nextIdx + 1}`
+          const label = `P${i + 1} – P${nextIdx + 1}`
           const OFFSET = 12
           const estW = label.length * 5.2
           return (
@@ -323,7 +323,7 @@ function ShapeRenderer({
           else if (angle <= -90) angle += 180
 
           const nextIdx = (i + 1) % pts.length
-          const label = `P${i + 1}–P${nextIdx + 1}`
+          const label = `P${i + 1} – P${nextIdx + 1}`
           const OFFSET = 12
           const estW = label.length * 5.2
 
@@ -653,7 +653,7 @@ function DrawingPreview({
           if (angle > 90) angle -= 180
           else if (angle <= -90) angle += 180
           const nextIdx = (i + 1) % pts.length
-          const label = `P${i + 1}–P${nextIdx + 1}`
+          const label = `P${i + 1} – P${nextIdx + 1}`
           const OFFSET = 12
           const estW = label.length * 5.2
           return (
@@ -825,14 +825,6 @@ export default function SampleCanvas({
     if (shape === null) setDrawState({ mode: 'idle' })
   }, [shape])
 
-  // Fit viewport when shape or scan result changes (skip while actively drawing points)
-  useEffect(() => {
-    if (drawState.mode === 'drawing_freeform') return
-    const bbox = shape ? shapeBoundingBox(shape) : null
-    if (bbox) {
-      setVp(fitViewport(bbox.xMin, bbox.yMin, bbox.xMax, bbox.yMax, size.w, size.h))
-    }
-  }, [shape, drawState.mode, size.w, size.h])
 
   // Handle draw mode switches — no auto shape conversion; just manage draw state
   useEffect(() => {
@@ -1564,7 +1556,7 @@ export default function SampleCanvas({
           )}
           {hoverInfo.kind === 'edge' && (
             <>
-              <div className="font-semibold">P{hoverInfo.fromIdx + 1}–P{hoverInfo.toIdx + 1}</div>
+              <div className="font-semibold">P{hoverInfo.fromIdx + 1} – P{hoverInfo.toIdx + 1}</div>
               <div className="opacity-80">Length:&nbsp;{fmtDisplay(hoverInfo.length, displayUnit, 2)}</div>
             </>
           )}
