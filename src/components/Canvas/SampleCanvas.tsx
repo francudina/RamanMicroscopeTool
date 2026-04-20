@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  Arc,
   Circle,
   Group,
   Layer,
@@ -1564,6 +1565,89 @@ export default function SampleCanvas({
                 hoveredPass={hoveredPass}
                 onPassHover={onPassHover}
               />
+            )
+          })()}
+
+          {/* Alignment angle arcs — always shown at P1 when shape has edges */}
+          {shape?.type === 'freeform' && shape.freeform && shape.freeform.points.length >= 3 && (() => {
+            const pts = shape.freeform.points
+            const n = pts.length
+            const vx = toX(pts[0].x)
+            const vy = toY(pts[0].y)
+
+            // The two edges from P1
+            const edges = [
+              { dx: toX(pts[n - 1].x) - vx, dy: toY(pts[n - 1].y) - vy },
+              { dx: toX(pts[1].x)     - vx, dy: toY(pts[1].y)     - vy },
+            ]
+
+            const REF_LEN = 56
+            const ARC_RADII = [28, 42]  // different radii so arcs don't overlap
+            const arcColor = darkMode ? '#9ca3af' : '#6b7280'
+            const textColor = darkMode ? '#e5e7eb' : '#111827'
+            const fillColor = darkMode ? 'rgba(156,163,175,0.1)' : 'rgba(107,114,128,0.12)'
+
+            // For each edge: find angle to nearest Y reference (Y-up=270° or Y-down=90°)
+            // and compute the arc rotation/sweep so it sits OUTSIDE the shape vertex.
+            //
+            // Rule (Konva clockwise from positive-X):
+            //   Edges with ang ≥ 180° are "upward" → reference is Y-up (270°)
+            //     ang > 270°: arc from Y-up (rotation=270) CW sweep=(ang-270)
+            //     ang < 270°: arc from edge (rotation=ang) CW sweep=(270-ang)
+            //   Edges with ang < 180° are "downward" → reference is Y-down (90°)
+            //     ang < 90°:  arc from edge (rotation=ang) CW sweep=(90-ang)
+            //     ang > 90°:  arc from Y-down (rotation=90) CW sweep=(ang-90)
+            // This always places the arc in the exterior half-plane at P1.
+
+            const arcs: { rotation: number; sweep: number; r: number }[] = []
+
+            edges.forEach((e, i) => {
+              const ang = ((Math.atan2(e.dy, e.dx) * 180 / Math.PI) + 360) % 360
+              let rotation: number, sweep: number
+
+              if (ang >= 180) {
+                // Upward edge → Y-up (270°)
+                if (ang > 270) { rotation = 270; sweep = ang - 270 }
+                else            { rotation = ang;  sweep = 270 - ang }
+              } else {
+                // Downward edge → Y-down (90°)
+                if (ang < 90) { rotation = ang; sweep = 90 - ang }
+                else          { rotation = 90;  sweep = ang - 90  }
+              }
+
+              if (sweep < 0.5 || sweep > 89.5) return
+              arcs.push({ rotation, sweep, r: ARC_RADII[i] })
+            })
+
+            return (
+              <Group listening={false}>
+                {/* Dashed vertical Y reference — both up and down from P1 */}
+                <Line points={[vx, vy, vx, vy - REF_LEN]} stroke={arcColor} strokeWidth={1} dash={[5, 4]} listening={false} />
+                <Line points={[vx, vy, vx, vy + REF_LEN]} stroke={arcColor} strokeWidth={1} dash={[5, 4]} listening={false} />
+
+                {arcs.map(({ rotation, sweep, r }, i) => {
+                  const midRad = (rotation + sweep / 2) * Math.PI / 180
+                  const labelR = r + 13
+                  return (
+                    <React.Fragment key={i}>
+                      <Arc
+                        x={vx} y={vy}
+                        innerRadius={r - 1} outerRadius={r}
+                        rotation={rotation} angle={sweep}
+                        fill={fillColor} stroke={arcColor} strokeWidth={1.5}
+                        listening={false}
+                      />
+                      <Text
+                        x={vx + labelR * Math.cos(midRad) - 11}
+                        y={vy + labelR * Math.sin(midRad) - 7}
+                        text={`${sweep.toFixed(1)}°`}
+                        fontSize={11} fontStyle="bold" fill={textColor}
+                        listening={false}
+                      />
+                    </React.Fragment>
+                  )
+                })}
+              </Group>
             )
           })()}
 

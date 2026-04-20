@@ -216,15 +216,26 @@ export default function ScanResults({
 
           {rotationOptimizerEnabled && rotationOptimum && (
             rotatedScanResult && rotatedScanResult.passes.length < result.passes.length ? (
-              <div className="mx-3 mb-2 rounded border border-amber-400 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 space-y-1">
+              <div className="mx-3 mb-2 rounded border border-amber-400 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 space-y-1.5">
                 <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">Rotation suggested</p>
                 <p className="text-xs text-amber-700 dark:text-amber-300">
                   Rotating sample by <strong>{rotationOptimum.angle_deg}°</strong> reduces tiles from{' '}
                   <strong>{result.passes.length}</strong> to{' '}
                   <strong>{rotatedScanResult.passes.length}</strong>.
                 </p>
+                <div className="border-t border-amber-300 dark:border-amber-700/40 pt-1.5 space-y-0.5">
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-500">Alignment angles</p>
+                  <div className="flex gap-4">
+                    <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300">
+                      → X: <strong>{rotationOptimum.angle_deg}°</strong>
+                    </span>
+                    <span className="text-[10px] font-mono text-amber-700 dark:text-amber-300">
+                      ↑ Y: <strong>{+(90 - rotationOptimum.angle_deg).toFixed(1)}°</strong>
+                    </span>
+                  </div>
+                </div>
                 <p className="text-[9px] text-amber-600 dark:text-amber-500">
-                  Rotate around the sample centre before placing on the stage.
+                  Rotate the sample around its centre before placing on the stage.
                 </p>
               </div>
             ) : (
