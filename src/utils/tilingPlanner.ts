@@ -5,16 +5,17 @@ import { getBoundingBox, pointInShape } from './scanGenerator'
 // ── Public helpers ─────────────────────────────────────────────────────────────
 
 /**
- * Returns a synthetic rectangle SampleShape whose bounds equal the
- * axis-aligned bounding box of `shape` after rotating it `angleDeg` degrees
- * clockwise around the shape's centroid.  Used to generate a "rotated" scan
- * result for preview purposes.
+ * Returns a freeform SampleShape whose polygon vertices are the original
+ * shape's vertices rotated `angleDeg` degrees clockwise around the centroid.
+ * `getBoundingBox` on this shape gives the correct AABB for tile splitting,
+ * and `pointInShape` uses polygon containment — so dots in AABB corners that
+ * fall outside the actual rotated polygon are correctly excluded.
  */
-export function getRotatedBoundingRectShape(
+export function getRotatedFreeformShape(
   shape: SampleShape,
   angleDeg: number,
 ): SampleShape {
-  if (shape.type === 'circle') return shape // AABB of a circle is rotation-invariant
+  if (shape.type === 'circle') return shape // circle is rotation-invariant
 
   const pts = getShapePolygon(shape)
   if (pts.length === 0) return shape
@@ -25,16 +26,12 @@ export function getRotatedBoundingRectShape(
   const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length
   const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length
 
-  const xs = pts.map((p) => cx + (p.x - cx) * cos - (p.y - cy) * sin)
-  const ys = pts.map((p) => cy + (p.x - cx) * sin + (p.y - cy) * cos)
+  const rotatedPts = pts.map((p) => ({
+    x: cx + (p.x - cx) * cos - (p.y - cy) * sin,
+    y: cy + (p.x - cx) * sin + (p.y - cy) * cos,
+  }))
 
-  const xMin = Math.min(...xs), xMax = Math.max(...xs)
-  const yMin = Math.min(...ys), yMax = Math.max(...ys)
-
-  return {
-    type: 'rectangle',
-    rect: { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin },
-  }
+  return { type: 'freeform', freeform: { points: rotatedPts } }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

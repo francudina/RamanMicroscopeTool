@@ -421,6 +421,8 @@ function ScanGridRenderer({
   focusMode,
   hoveredPass,
   onPassHover,
+  skipHoverEvents = false,
+  cullBounds,
 }: {
   scanResult: ScanResult
   vp: Viewport
@@ -429,16 +431,20 @@ function ScanGridRenderer({
   focusMode: boolean
   hoveredPass: number | null
   onPassHover: (pass: number | null) => void
+  skipHoverEvents?: boolean
+  /** Override axis-aligned culling bounds (µm). Use when tiles are in a rotated frame. */
+  cullBounds?: { xMin: number; xMax: number; yMin: number; yMax: number }
 }) {
   const toX = (um: number) => umToPixel(um, vp.left, vp.scale)
   const toY = (um: number) => umToPixel(um, vp.top, vp.scale)
 
-  // Viewport bounds in µm with a small buffer so dots don't pop in/out at edges
+  // Viewport bounds in µm with a small buffer so dots don't pop in/out at edges.
+  // When rendering inside a rotated Group, the caller must pass rotated-frame cullBounds.
   const buf = 16 / vp.scale
-  const visXMin = vp.left - buf
-  const visXMax = vp.left + width  / vp.scale + buf
-  const visYMin = vp.top  - buf
-  const visYMax = vp.top  + height / vp.scale + buf
+  const visXMin = cullBounds ? cullBounds.xMin - buf : vp.left - buf
+  const visXMax = cullBounds ? cullBounds.xMax + buf : vp.left + width  / vp.scale + buf
+  const visYMin = cullBounds ? cullBounds.yMin - buf : vp.top  - buf
+  const visYMax = cullBounds ? cullBounds.yMax + buf : vp.top  + height / vp.scale + buf
 
   const elements: React.ReactElement[] = []
 
@@ -460,8 +466,8 @@ function ScanGridRenderer({
         width={(pass.region.x_max - pass.region.x_min) * vp.scale}
         height={(pass.region.y_max - pass.region.y_min) * vp.scale}
         fill="transparent"
-        onMouseEnter={() => onPassHover(pass.pass_number)}
-        onMouseLeave={() => onPassHover(null)}
+        onMouseEnter={skipHoverEvents ? undefined : () => onPassHover(pass.pass_number)}
+        onMouseLeave={skipHoverEvents ? undefined : () => onPassHover(null)}
       />,
     )
 
@@ -1043,11 +1049,35 @@ export default function SampleCanvas({
       const snapped = um
       setSnapPoint(snapping ? snapped : null)
 
+      // ── Rotated tile hover detection ───────────────────────────────────────
+      // For rotated tiles we bypass Konva hit rects (skipHoverEvents=true) and
+      // detect hover manually by un-rotating the mouse position into the tile frame.
+      const isRotatedView = rotationTab === 'rotated' && rotatedScanResult != null && rotationOptimum != null && shape != null
+      let rotatedMousePx: { x: number; y: number } | null = null
+      if (isRotatedView) {
+        const { x: cx_um, y: cy_um } = getShapeCentroidUm(shape!)
+        const cx_px = umToPixel(cx_um, vp.left, vp.scale)
+        const cy_px = umToPixel(cy_um, vp.top, vp.scale)
+        const angleRad = (rotationOptimum!.angle_deg * Math.PI) / 180
+        const cosA = Math.cos(angleRad)
+        const sinA = Math.sin(angleRad)
+        const dx = pos.x - cx_px
+        const dy = pos.y - cy_px
+        // Rotate by +angle (inverse of the -angle group transform)
+        rotatedMousePx = { x: cx_px + dx * cosA - dy * sinA, y: cy_px + dx * sinA + dy * cosA }
+        const mouseUmX = vp.left + rotatedMousePx.x / vp.scale
+        const mouseUmY = vp.top  + rotatedMousePx.y / vp.scale
+        const hitTile = rotatedScanResult!.passes.find(
+          (p) => mouseUmX >= p.region.x_min && mouseUmX <= p.region.x_max &&
+                 mouseUmY >= p.region.y_min && mouseUmY <= p.region.y_max,
+        )
+        onPassHover(hitTile ? hitTile.pass_number : null)
+      }
+
       // ── Scan dot proximity tooltip ─────────────────────────────────────────
       // Only active when dots are rendered (same conditions as ScanGridRenderer):
       // focused pass is hovered, spacing is large enough, and we're not mid-draw.
-      const activeResult = (rotationTab === 'rotated' && rotatedScanResult != null &&
-        rotationOptimum != null && rotationOptimum.tile_count < rotationOptimum.baseline_tile_count)
+      const activeResult = rotationTab === 'rotated' && rotatedScanResult != null
         ? rotatedScanResult
         : scanResult
       if (
@@ -1061,17 +1091,41 @@ export default function SampleCanvas({
           if (dotSpacePx >= DOT_SPACING_THRESHOLD) {
             const DOT_HIT_PX = 8
             const buf = DOT_HIT_PX / vp.scale
-            const visXMin = vp.left - buf
-            const visXMax = vp.left + size.w / vp.scale + buf
-            const visYMin = vp.top - buf
-            const visYMax = vp.top + size.h / vp.scale + buf
+            // For the rotated case, cull against the rotated viewport AABB
+            // (same transform we use for ScanGridRenderer's cullBounds).
+            let visXMin: number, visXMax: number, visYMin: number, visYMax: number
+            if (isRotatedView && rotatedMousePx && rotationOptimum && shape) {
+              const { x: cx_um, y: cy_um } = getShapeCentroidUm(shape)
+              const cx_px = umToPixel(cx_um, vp.left, vp.scale)
+              const cy_px = umToPixel(cy_um, vp.top, vp.scale)
+              const angleRad = (rotationOptimum.angle_deg * Math.PI) / 180
+              const cosA = Math.cos(angleRad)
+              const sinA = Math.sin(angleRad)
+              const corners: [number, number][] = [[0, 0], [size.w, 0], [0, size.h], [size.w, size.h]]
+              const rxs = corners.map(([sx, sy]) => {
+                const dx = sx - cx_px; const dy = sy - cy_px
+                return vp.left + (cx_px + dx * cosA - dy * sinA) / vp.scale
+              })
+              const rys = corners.map(([sx, sy]) => {
+                const dx = sx - cx_px; const dy = sy - cy_px
+                return vp.top + (cy_px + dx * sinA + dy * cosA) / vp.scale
+              })
+              visXMin = Math.min(...rxs) - buf; visXMax = Math.max(...rxs) + buf
+              visYMin = Math.min(...rys) - buf; visYMax = Math.max(...rys) + buf
+            } else {
+              visXMin = vp.left - buf; visXMax = vp.left + size.w / vp.scale + buf
+              visYMin = vp.top  - buf; visYMax = vp.top  + size.h / vp.scale + buf
+            }
             let bestDist = DOT_HIT_PX
             let bestInfo: HoverInfo | null = null
+            // For rotated tiles, dots are in the rotated frame — compare against the
+            // un-rotated mouse position so distances are measured correctly.
+            const effectivePos = (isRotatedView && rotatedMousePx) ? rotatedMousePx : pos
             for (let idx = 0; idx < pass.grid_points.length; idx++) {
               const pt = pass.grid_points[idx]
               if (pt.x < visXMin || pt.x > visXMax || pt.y < visYMin || pt.y > visYMax) continue
-              const dpx = umToPixel(pt.x, vp.left, vp.scale) - pos.x
-              const dpy = umToPixel(pt.y, vp.top, vp.scale) - pos.y
+              const dpx = umToPixel(pt.x, vp.left, vp.scale) - effectivePos.x
+              const dpy = umToPixel(pt.y, vp.top, vp.scale) - effectivePos.y
               const dist = Math.sqrt(dpx * dpx + dpy * dpy)
               if (dist < bestDist) {
                 bestDist = dist
@@ -1181,7 +1235,7 @@ export default function SampleCanvas({
         setHoverInfo(null)
       }
     },
-    [drawState, hoveredPass, panState, scanResult, shape, size.w, size.h, vp],
+    [drawState, hoveredPass, onPassHover, panState, rotatedScanResult, rotationOptimum, rotationTab, scanResult, shape, size.w, size.h, vp],
   )
 
   const handlePointerUp = useCallback(
@@ -1450,13 +1504,33 @@ export default function SampleCanvas({
           {(() => {
             const showRotated = rotationTab === 'rotated' &&
               rotatedScanResult != null &&
-              rotationOptimum != null &&
-              rotationOptimum.tile_count < rotationOptimum.baseline_tile_count
+              rotationOptimum != null
 
             if (showRotated && shape) {
               const { x: cx_um, y: cy_um } = getShapeCentroidUm(shape)
               const cx_px = umToPixel(cx_um, vp.left, vp.scale)
               const cy_px = umToPixel(cy_um, vp.top, vp.scale)
+              // Compute the viewport rectangle's AABB in the rotated µm frame.
+              // The Group rotates by -angle, so to un-rotate screen corners we rotate by +angle.
+              const angleRad = (rotationOptimum!.angle_deg * Math.PI) / 180
+              const cosA = Math.cos(angleRad)
+              const sinA = Math.sin(angleRad)
+              const screenCorners: [number, number][] = [
+                [0, 0], [size.w, 0], [0, size.h], [size.w, size.h],
+              ]
+              const rotatedUmCorners = screenCorners.map(([sx, sy]) => {
+                const dx = sx - cx_px
+                const dy = sy - cy_px
+                const lx = cx_px + dx * cosA - dy * sinA
+                const ly = cy_px + dx * sinA + dy * cosA
+                return { x: vp.left + lx / vp.scale, y: vp.top + ly / vp.scale }
+              })
+              const rotatedCullBounds = {
+                xMin: Math.min(...rotatedUmCorners.map((p) => p.x)),
+                xMax: Math.max(...rotatedUmCorners.map((p) => p.x)),
+                yMin: Math.min(...rotatedUmCorners.map((p) => p.y)),
+                yMax: Math.max(...rotatedUmCorners.map((p) => p.y)),
+              }
               return (
                 <Group
                   x={cx_px}
@@ -1473,6 +1547,8 @@ export default function SampleCanvas({
                     focusMode={focusMode}
                     hoveredPass={hoveredPass}
                     onPassHover={onPassHover}
+                    skipHoverEvents={true}
+                    cullBounds={rotatedCullBounds}
                   />
                 </Group>
               )

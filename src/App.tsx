@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { generateScanGrid } from './utils/scanGenerator'
-import { findOptimalRotation, getRotatedBoundingRectShape } from './utils/tilingPlanner'
+import { findOptimalRotation, getRotatedFreeformShape } from './utils/tilingPlanner'
 import SampleCanvas from './components/Canvas/SampleCanvas'
 import ShapeControls from './components/Controls/ShapeControls'
 import ScanParamsForm from './components/Controls/ScanParamsForm'
@@ -229,7 +229,7 @@ export default function App() {
       setRotationOptimum(optimum)
       if (optimum.tile_count < optimum.baseline_tile_count) {
         try {
-          const rotatedShape = getRotatedBoundingRectShape(shape, optimum.angle_deg)
+          const rotatedShape = getRotatedFreeformShape(shape, optimum.angle_deg)
           const rotated = generateScanGrid(rotatedShape, scanParams, stage)
           // Only keep rotated result if it actually reduces tile count
           if (rotated.passes.length < scanResult.passes.length) {
